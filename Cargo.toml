@@ -10,3 +10,4 @@ clap = { version = "3.1.6", features = ["derive"] }
 serde = { version = "1.0.136", features = ["derive"] }
 serde_yaml = "0.8.23"
 anyhow = "1.0.56"
+iptables = "0.5.0"

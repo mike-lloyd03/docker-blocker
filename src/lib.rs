@@ -18,6 +18,7 @@ pub struct Device {
 pub struct Rule {
     pub service: String,
     pub port: u16,
+    pub allow_from: Vec<String>,
 }
 
 pub fn load_config() -> Result<Config> {

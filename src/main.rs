@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use std::process::exit;
 mod command;
-use docker_blocker::{load_config, Config};
+use docker_blocker::load_config;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about)]
@@ -21,16 +21,16 @@ struct Args {
     command: Command,
 }
 
-pub struct App {
-    args: Args,
-    config: Config,
-}
+// pub struct App {
+//     args: Args,
+//     config: Config,
+// }
 
 #[derive(Subcommand, Debug)]
 enum Command {
-    /// Initialize a new repo
+    /// Reload rules from the configuration file
     Reload,
-    /// Run a backup job now
+    /// Disable all docker-blocker rules
     Disable,
     // /// Check the condition of all configured repos
     // Check {
@@ -52,6 +52,6 @@ fn main() {
 
     match args.command {
         Command::Reload => self::command::reload(&config),
-        Command::Disable => todo!(),
+        Command::Disable => self::command::disable(),
     }
 }
