@@ -1,10 +1,11 @@
 use anyhow::{bail, Result};
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::fmt::Debug;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
-    pub known_devices: Option<Vec<Device>>,
+    pub known_devices: Option<HashMap<String, String>>,
     pub rules: Vec<Rule>,
 }
 

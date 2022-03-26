@@ -89,6 +89,7 @@ dependencies = [
  "anyhow",
  "clap",
  "iptables",
+ "regex",
  "serde",
  "serde_yaml",
 ]

@@ -1,15 +1,16 @@
+use anyhow::{bail, Result};
 use docker_blocker::{Config, Rule};
 use iptables::IPTables;
+use std::net::Ipv4Addr;
 
 pub fn reload(config: &Config) {
     let ipt = iptables::new(false).unwrap();
 
-    reset_rules(&ipt);
+    ipt.flush_chain("filter", "DOCKER-USER").unwrap();
     for r in &config.rules {
         allow_devices(&ipt, r);
-        block_port(&ipt, r);
     }
-    ipt.append("filter", "DOCKER-USER", "-j RETURN").unwrap();
+    ipt.append("filter", "DOCKER-USER", "-j DROP").unwrap();
 }
 
 pub fn disable() {
@@ -18,17 +19,20 @@ pub fn disable() {
     reset_rules(&ipt);
 }
 
-// for DEV in $ALLOWED_DEVICES; do
-//   iptables -"$METHOD" "$CHAIN" -s "$DEV" -p tcp --dport "$PORT" -j "$TARGET"
-// done
-// iptables -"$METHOD" "$CHAIN" -p tcp --dport "$PORT" -j REJECT
 fn allow_devices(ipt: &IPTables, rule: &Rule) {
     for device in &rule.allow_from {
-        let rule = format!(
+        let src_rule = format!(
             "-s {} -p tcp --dport {} -m comment --comment 'docker-blocker: {}' -j RETURN",
             device, rule.port, rule.service
         );
-        ipt.append_unique("filter", "DOCKER-USER", &rule).unwrap();
+        let dest_rule = format!(
+            "-d {} -p tcp --sport {} -m comment --comment 'docker-blocker: {}' -j RETURN",
+            device, rule.port, rule.service
+        );
+        ipt.append_unique("filter", "DOCKER-USER", &src_rule)
+            .unwrap();
+        ipt.append_unique("filter", "DOCKER-USER", &dest_rule)
+            .unwrap();
     }
 }
 
@@ -51,4 +55,15 @@ fn reset_rules(ipt: &IPTables) {
         let rule: Vec<&str> = c.splitn(3, ' ').collect();
         ipt.delete("filter", "DOCKER-USER", rule[2]).unwrap();
     }
+}
+
+fn parse_device(config: &Config, device: String) -> Result<String> {
+    if device.parse::<Ipv4Addr>().is_ok() {
+        return Ok(device);
+    };
+    match &config.known_devices {
+        Some(d) => return Ok(d.get(&device).unwrap().to_string()),
+        None => (),
+    }
+    bail!("Nope")
 }
