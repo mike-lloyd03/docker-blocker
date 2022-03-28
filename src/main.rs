@@ -1,14 +1,14 @@
 use clap::{Parser, Subcommand};
 use std::process::exit;
 mod command;
-use docker_blocker::load_config;
+use docker_blocker::{load_config, Config};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about)]
 struct Args {
-    // /// Suppress standard output
-    // #[clap(short, long)]
-    // quiet: bool,
+    /// Only show what would be done
+    #[clap(long)]
+    dry_run: bool,
 
     // /// Arguments to pass to restic
     // #[clap(short, long)]
@@ -21,10 +21,10 @@ struct Args {
     command: Command,
 }
 
-// pub struct App {
-//     args: Args,
-//     config: Config,
-// }
+pub struct App {
+    args: Args,
+    config: Config,
+}
 
 #[derive(Subcommand, Debug)]
 enum Command {
@@ -48,10 +48,10 @@ fn main() {
             exit(1);
         }
     };
-    // let app = App { args, config };
+    let app = App { args, config };
 
-    match args.command {
-        Command::Enable => self::command::enable(&config),
+    match app.args.command {
+        Command::Enable => self::command::enable(&app),
         Command::Disable => self::command::disable(),
     }
 }
