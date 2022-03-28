@@ -29,7 +29,7 @@ struct Args {
 #[derive(Subcommand, Debug)]
 enum Command {
     /// Reload rules from the configuration file
-    Reload,
+    Enable,
     /// Disable all docker-blocker rules
     Disable,
     // /// Check the condition of all configured repos
@@ -51,7 +51,7 @@ fn main() {
     // let app = App { args, config };
 
     match args.command {
-        Command::Reload => self::command::reload(&config),
+        Command::Enable => self::command::enable(&config),
         Command::Disable => self::command::disable(),
     }
 }

@@ -1,21 +1,19 @@
 known_devices:
-  - name: device1
-    ip: 192.168.0.50
-  - name: device2
-    ip: 192.168.0.51
+  device1: 192.168.0.50
+  device2: 192.168.0.51
 
 rules:
   - service: service1
     port: 4000
-    allow_from:
+    allow:
       - 192.168.0.80
       - 10.0.5.12
   - service: service2
     port: 6000
-    allow_from:
+    allow:
       - device1
       - device2
   - service: service2
     port: 8080
-    allow_from:
+    allow:
       - any
