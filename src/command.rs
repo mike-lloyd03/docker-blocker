@@ -1,3 +1,5 @@
+use anyhow::{bail, Result};
+
 use crate::App;
 use docker_blocker::Rule;
 use iptables::IPTables;
@@ -5,46 +7,61 @@ use iptables::IPTables;
 pub fn enable(app: &App) {
     let ipt = iptables::new(false).unwrap();
 
+    let preroute_return = "-m addrtype —-dst-type LOCAL -m comment --comment 'docker-blocker: preroute_return' -j RETURN";
+    let preroute_jump = "-m addrtype —-dst-type LOCAL -m comment --comment 'docker-blocker: preroute_jump' -j DOCKER-BLOCKER";
+
     match app.args.dry_run {
-        true => println!("-F DOCKER-USER"),
-        false => ipt.flush_chain("filter", "DOCKER-USER").unwrap(),
-    };
+        true => {
+            println!("-t nat -N DOCKER-BLOCKER");
+            println!("-t nat -I PREROUTING {}", preroute_return);
+            println!("-t nat -I PREROUTING {}", preroute_jump);
+        }
+        false => {
+            create_chain(&ipt).unwrap();
+            ipt.insert_unique("nat", "DOCKER-BLOCKER", preroute_return, 0)
+                .unwrap();
+            ipt.insert_unique("nat", "DOCKER-BLOCKER", preroute_jump, 0)
+                .unwrap();
+        }
+    }
+
     for r in &app.config.rules {
         allow_devices(&ipt, r, app.args.dry_run);
     }
-    match app.args.dry_run {
-        true => println!("-A DOCKER-USER -J DROP"),
-        false => ipt.append("filter", "DOCKER-USER", "-j DROP").unwrap(),
-    };
 }
 
 pub fn disable() {
     let ipt = iptables::new(false).unwrap();
 
-    ipt.flush_chain("filter", "DOCKER-USER").unwrap();
-    ipt.append("filter", "DOCKER-USER", "-j RETURN").unwrap();
+    // ipt.flush_chain("filter", "DOCKER-USER").unwrap();
+    // ipt.append("filter", "DOCKER-USER", "-j RETURN").unwrap();
+}
+
+fn create_chain(ipt: &IPTables) -> Result<()> {
+    match ipt.new_chain("nat", "DOCKER-BLOCKER") {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            if e.to_string().contains("Chain already exists.") {
+                Ok(())
+            } else {
+                bail!("{}", e)
+            }
+        }
+    }
 }
 
 fn allow_devices(ipt: &IPTables, rule: &Rule, dry_run: bool) {
     for device in &rule.allow {
-        let src_rule = format!(
-            "-s {} -p tcp --dport {} -m comment --comment 'docker-blocker: {}' -j RETURN",
-            device, rule.port, rule.service
-        );
-        let dest_rule = format!(
-            "-d {} -p tcp --sport {} -m comment --comment 'docker-blocker: {}' -j RETURN",
+        let rule = format!(
+            "-s {} -p tcp -m tcp --dport {} -m state --state NEW,ESTABLISHED -m comment --comment 'docker-blocker: {}' -j DOCKER",
             device, rule.port, rule.service
         );
         match dry_run {
             true => {
-                println!("-A DOCKER-USER {}", &src_rule);
-                println!("-A DOCKER-USER {}", &dest_rule);
+                println!("-A DOCKER-BLOCKER {}", &rule);
             }
             false => {
-                ipt.append_unique("filter", "DOCKER-USER", &src_rule)
-                    .unwrap();
-                ipt.append_unique("filter", "DOCKER-USER", &dest_rule)
-                    .unwrap();
+                ipt.append_unique("nat", "DOCKER-BLOCKER", &rule).unwrap();
             }
         };
     }
