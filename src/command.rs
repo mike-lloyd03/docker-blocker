@@ -18,9 +18,9 @@ pub fn enable(app: &App) {
         }
         false => {
             create_chain(&ipt).unwrap();
-            ipt.insert_unique("nat", "DOCKER-BLOCKER", preroute_return, 0)
+            ipt.insert_unique("nat", "DOCKER-BLOCKER", preroute_return, 1)
                 .unwrap();
-            ipt.insert_unique("nat", "DOCKER-BLOCKER", preroute_jump, 0)
+            ipt.insert_unique("nat", "DOCKER-BLOCKER", preroute_jump, 1)
                 .unwrap();
         }
     }
