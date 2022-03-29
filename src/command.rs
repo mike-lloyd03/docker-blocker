@@ -7,8 +7,8 @@ use iptables::IPTables;
 pub fn enable(app: &App) {
     let ipt = iptables::new(false).unwrap();
 
-    let preroute_return = "-m addrtype —-dst-type LOCAL -m comment --comment 'docker-blocker: preroute_return' -j RETURN";
-    let preroute_jump = "-m addrtype —-dst-type LOCAL -m comment --comment 'docker-blocker: preroute_jump' -j DOCKER-BLOCKER";
+    let preroute_return = "-m addrtype --dst-type LOCAL -m comment --comment 'docker-blocker: preroute_return' -j RETURN";
+    let preroute_jump = "-m addrtype --dst-type LOCAL -m comment --comment 'docker-blocker: preroute_jump' -j DOCKER-BLOCKER";
 
     match app.args.dry_run {
         true => {
