@@ -36,11 +36,10 @@ pub fn disable() {
     let preroute_return = "-m addrtype --dst-type LOCAL -m comment --comment 'docker-blocker: preroute_return' -j RETURN";
     let preroute_db = "-m addrtype --dst-type LOCAL -m comment --comment 'docker-blocker: preroute_jump' -j DOCKER-BLOCKER";
 
-    ipt.flush_chain("nat", "DOCKER-BLOCKER").unwrap();
-    ipt.delete_chain("nat", "DOCKER-BLOCKER").unwrap();
     ipt.delete_all("nat", "PREROUTING", preroute_return)
         .unwrap();
     ipt.delete_all("nat", "PREROUTING", preroute_db).unwrap();
+    ipt.delete_chain("nat", "DOCKER-BLOCKER").unwrap();
 }
 
 fn create_chain(ipt: &IPTables) -> Result<()> {
