@@ -8,19 +8,19 @@ pub fn enable(app: &App) {
     let ipt = iptables::new(false).unwrap();
 
     let preroute_return = "-m addrtype --dst-type LOCAL -m comment --comment 'docker-blocker: preroute_return' -j RETURN";
-    let preroute_jump = "-m addrtype --dst-type LOCAL -m comment --comment 'docker-blocker: preroute_jump' -j DOCKER-BLOCKER";
+    let preroute_db = "-m addrtype --dst-type LOCAL -m comment --comment 'docker-blocker: preroute_jump' -j DOCKER-BLOCKER";
 
     match app.args.dry_run {
         true => {
             println!("-t nat -N DOCKER-BLOCKER");
             println!("-t nat -I PREROUTING {}", preroute_return);
-            println!("-t nat -I PREROUTING {}", preroute_jump);
+            println!("-t nat -I PREROUTING {}", preroute_db);
         }
         false => {
             create_chain(&ipt).unwrap();
             ipt.insert_unique("nat", "PREROUTING", preroute_return, 1)
                 .unwrap();
-            ipt.insert_unique("nat", "PREROUTING", preroute_jump, 1)
+            ipt.insert_unique("nat", "PREROUTING", preroute_db, 1)
                 .unwrap();
         }
     }
@@ -33,8 +33,13 @@ pub fn enable(app: &App) {
 pub fn disable() {
     let ipt = iptables::new(false).unwrap();
 
-    // ipt.flush_chain("filter", "DOCKER-USER").unwrap();
-    // ipt.append("filter", "DOCKER-USER", "-j RETURN").unwrap();
+    let preroute_return = "-m addrtype --dst-type LOCAL -m comment --comment 'docker-blocker: preroute_return' -j RETURN";
+    let preroute_db = "-m addrtype --dst-type LOCAL -m comment --comment 'docker-blocker: preroute_jump' -j DOCKER-BLOCKER";
+
+    ipt.delete_chain("nat", "DOCKER-BLOCKER").unwrap();
+    ipt.delete_all("nat", "PREROUTING", preroute_return)
+        .unwrap();
+    ipt.delete_all("nat", "PREROUTING", preroute_db).unwrap();
 }
 
 fn create_chain(ipt: &IPTables) -> Result<()> {
@@ -42,6 +47,7 @@ fn create_chain(ipt: &IPTables) -> Result<()> {
         Ok(_) => Ok(()),
         Err(e) => {
             if e.to_string().contains("Chain already exists.") {
+                ipt.flush_chain("nat", "DOCKER-BLOCKER").unwrap();
                 Ok(())
             } else {
                 bail!("{}", e)
